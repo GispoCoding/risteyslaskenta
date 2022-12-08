@@ -1,0 +1,16 @@
+[general]
+name=risteyslaskenta
+description=
+about=
+version=0.1.0
+qgisMinimumVersion=3.16
+author=
+email=
+changelog=
+tags=
+repository=https://github.com/my-organization/risteyslaskenta
+tracker=https://github.com/my-organization/risteyslaskenta/issues
+homepage=https://github.com/my-organization/risteyslaskenta
+category=Plugins
+experimental=True
+deprecated=False

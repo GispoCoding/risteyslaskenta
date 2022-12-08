@@ -1,0 +1,5 @@
+plugin_path: risteyslaskenta_package
+github_organization_slug: my-organization
+project_slug: risteyslaskenta
+transifex_coordinator: replace-me
+transifex_organization: replace-me
