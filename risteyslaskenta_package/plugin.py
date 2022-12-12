@@ -1,5 +1,6 @@
 from typing import Callable, List, Optional
 
+from qgis.core import QgsCoordinateReferenceSystem
 from qgis.PyQt.QtCore import QCoreApplication, QTranslator
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction, QWidget
@@ -12,6 +13,13 @@ from risteyslaskenta_package.qgis_plugin_tools.tools.custom_logging import (
 from risteyslaskenta_package.qgis_plugin_tools.tools.i18n import setup_translation
 from risteyslaskenta_package.qgis_plugin_tools.tools.resources import plugin_name
 
+from .risteyslaskenta_functions import (
+    check_same_crs,
+    create_lines_for_intersection,
+    create_result_layer,
+)
+from .ui.risteyslaskenta_dialog import RisteyslaskentaDialog
+
 
 class Plugin:
     """QGIS Plugin Implementation."""
@@ -22,7 +30,7 @@ class Plugin:
         setup_logger(Plugin.name)
 
         # initialize locale
-        locale, file_path = setup_translation()
+        _, file_path = setup_translation()
         if file_path:
             self.translator = QTranslator()
             self.translator.load(file_path)
@@ -123,4 +131,60 @@ class Plugin:
 
     def run(self) -> None:
         """Run method that performs all the real work"""
-        print("Hello QGIS plugin")
+
+        # Create the dialog with elements (after translation) and keep reference
+        # Only create GUI ONCE in callback, so that it will only load
+        # when the plugin is started
+        self.first_start = True
+        if self.first_start:
+            self.first_start = False
+            self.dlg = RisteyslaskentaDialog(iface)
+
+        # show the dialog and run dialog event loop
+        self.dlg.show()
+        result = self.dlg.exec_()
+
+        # See if OK was pressed
+        if result:
+
+            # Selections
+            data_layer = self.dlg.mMapLayerComboBox.currentLayer()
+            points_layer = self.dlg.mMapLayerComboBox_2.currentLayer()
+            if not check_same_crs(data_layer, points_layer):
+                raise Exception("The layers have different CRS")
+
+            # Convert input data if needed
+            # if points_layer.geometryType() == QgsWkbTypes.Polygon:
+            #     points_layer = convert_polygons_to_centroids(points_layer)
+
+            # Filter data if wanted
+            if self.dlg.checkBox.isChecked():
+                pass  # To be implemented
+
+            # Crs from data layer
+            crs = QgsCoordinateReferenceSystem()
+            crs.createFromProj(data_layer.crs().toProj())
+            result_layer = create_result_layer(crs)
+
+            # Iterate each intersection
+            # We want to handle one intersection at a time to create arcs that
+            # would overlap as little as possible
+            index = data_layer.fields().indexOf("id")
+            intersections = data_layer.uniqueValues(index)
+            failed_sum = 0
+            for _i, intersection in enumerate(intersections):
+                if not create_lines_for_intersection(
+                    points_layer, data_layer, result_layer, intersection
+                ):
+                    failed_sum += 1
+            print("Total number of intersections: {}".format(_i))
+            print(
+                "Number of intersections without location features: {}".format(
+                    failed_sum
+                )
+            )
+
+            # Visualize and stop editing
+            # visualize_layer(result_layer)
+            result_layer.commitChanges()
+            iface.vectorLayerTools().stopEditing(result_layer)
