@@ -138,7 +138,7 @@ class Plugin:
         self.first_start = True
         if self.first_start:
             self.first_start = False
-            self.dlg = RisteyslaskentaDialog(iface)
+            self.dlg = RisteyslaskentaDialog()
 
         # show the dialog and run dialog event loop
         self.dlg.show()
