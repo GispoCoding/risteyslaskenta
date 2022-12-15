@@ -1,7 +1,8 @@
+from functools import reduce
+
 from qgis.core import (
     QgsFeature,
     QgsField,
-    QgsFillSymbol,
     QgsGeometry,
     QgsPalLayerSettings,
     QgsPointXY,
@@ -29,16 +30,6 @@ def create_result_layer(crs) -> QgsVectorLayer:
     )
     result_layer.updateFields()
     result_layer.setName("Intersections visualized")
-    # symbol = QgsFillSymbol.createSimple(
-    #         {
-    #             'color': 'transparent',
-    #             'outline_color': 'blue',
-    #             'outline_width': 0.5,
-    #             'outline_style': 'dot'
-    #         }
-    #     )
-    # result_layer.renderer().setSymbol(symbol)
-    # result_layer.triggerRepaint()
     QgsProject.instance().addMapLayer(result_layer)
     return result_layer
 
@@ -71,66 +62,6 @@ def set_and_format_labels(layer: QgsVectorLayer) -> None:
     layer.triggerRepaint()
 
 
-def create_buffer(crs: str, point: QgsPointXY) -> QgsVectorLayer:
-    buffer_layer = QgsVectorLayer("Polygon", "pointbuffer", "memory")
-    buffer_layer.setCrs(crs)
-    geom = QgsGeometry.fromPointXY(point)
-    buffer_feat = QgsFeature()
-    buffer_geom = geom.buffer(1, 10)
-    buffer_feat.setGeometry(buffer_geom)
-    buffer_layer.startEditing()
-    buffer_layer.dataProvider().addFeature(buffer_feat)
-
-    buffer_layer.setName("Intersecting circle")
-    symbol = QgsFillSymbol.createSimple(
-        {
-            "color": "transparent",
-            "outline_color": "blue",
-            "outline_width": 0.5,
-            "outline_style": "dot",
-        }
-    )
-    buffer_layer.renderer().setSymbol(symbol)
-    buffer_layer.triggerRepaint()
-    buffer_layer.commitChanges()
-    QgsProject.instance().addMapLayer(buffer_layer)
-    return buffer_layer
-
-
-# def convert_polygon_to_point(polygon_layer, crs_id):
-#     point_layer = QgsVectorLayer("Line", "temp", "memory")
-
-#     crs = QgsCoordinateReferenceSystem()
-#     crs.createFromId(crs_id)
-#     point_layer.setCrs(crs)
-
-#     fields = polygon_layer.dataProvider().fields()
-#     point_layer.dataProvider().addAttributes(fields)
-
-#     point_layer.updateFields()
-#     point_layer.setName("Intersections visualized")
-#     point_layer.renderer().symbol().setColor(QColor.fromRgb(250, 0, 0))
-
-#     x = []
-#     y = []
-#     for feat in polygon_layer.getFeatures():
-#         for part in feat.geometry().parts():
-#             x.append(part.x)
-#             y.append(part.y)
-
-#     pass
-
-
-# def calculate_line_geometry(self, points_layer, intersection, direction):
-#     intersection_feats = points_layer.selectByExpression(f"\"RPH\"={intersection}")
-
-#     for feat in intersection_feats:
-#         if str(feat['Haara']) == direction[0]:
-#             start_point = feat.geometry().asPoint()
-#         elif str(feat['Haara']) == direction[1]:
-#             end_point = feat.geometry().asPoint()
-
-#     points = [QgsPointXY(1,1), QgsPointXY(1,1), QgsPointXY(1,1)]
 def check_same_crs(layer1, layer2) -> bool:
     if layer1.crs() == layer2.crs():
         return True
@@ -139,16 +70,14 @@ def check_same_crs(layer1, layer2) -> bool:
 
 
 def calculate_middle_point(
-    start_point: QgsPointXY, end_point: QgsPointXY, data_point: QgsPointXY
+    start_point: QgsPointXY, end_point: QgsPointXY, intersection_middle_point
 ) -> QgsPointXY:
     mid_x = (start_point.x() + end_point.x()) / 2
     mid_y = (start_point.y() + end_point.y()) / 2
-    data_x = data_point.x()
-    data_y = data_point.y()
     # If distance to centre is more than 2m, likely a turn
-    if abs(mid_x - data_x) > 2:
-        mid_x = (mid_x + data_x) / 2
-        mid_y = (mid_y + data_y) / 2
+    if abs(mid_x - intersection_middle_point[0]) > 2:
+        mid_x = (mid_x + intersection_middle_point[0]) / 2
+        mid_y = (mid_y + intersection_middle_point[1]) / 2
     return QgsPointXY(mid_x, mid_y)
 
 
@@ -171,20 +100,35 @@ def create_lines_for_intersection(
     for data_feat in data_feats:
         start_point, end_point = None, None
 
+        intersection_branches = []
         for location_feat in location_feats:
+            intersection_branches.append(
+                (
+                    location_feat.geometry().asPoint().x(),
+                    location_feat.geometry().asPoint().y(),
+                )
+            )
+
             if str(location_feat["Haara"]) == data_feat["direction"][0]:
                 start_point = location_feat.geometry().asPoint()
             elif str(location_feat["Haara"]) == data_feat["direction"][1]:
                 end_point = location_feat.geometry().asPoint()
 
         if start_point and end_point:
-            middle_point = calculate_middle_point(
-                start_point, end_point, data_feat.geometry().asPoint()
+            intersection_center_point = reduce(
+                lambda point1, point2: (
+                    (point1[0] + point2[0]) / 2,
+                    (point1[1] + point2[1]) / 2,
+                ),
+                intersection_branches,
+            )
+            line_middle_point = calculate_middle_point(
+                start_point, end_point, intersection_center_point
             )
 
             feat = QgsFeature(result_layer.fields())
             feat.setGeometry(
-                QgsGeometry.fromPolylineXY([start_point, middle_point, end_point])
+                QgsGeometry.fromPolylineXY([start_point, line_middle_point, end_point])
             )
             feat.setAttributes(
                 [
@@ -200,6 +144,7 @@ def create_lines_for_intersection(
 
 
 # def visualize_layer(layer):
+#     line_symbol = QgsLineSymbol()
 #     pass
 
 

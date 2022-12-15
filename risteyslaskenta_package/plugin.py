@@ -172,12 +172,14 @@ class Plugin:
             index = data_layer.fields().indexOf("id")
             intersections = data_layer.uniqueValues(index)
             failed_sum = 0
-            for _i, intersection in enumerate(intersections):
+            intersection_count = 0
+            for intersection in intersections:
                 if not create_lines_for_intersection(
                     points_layer, data_layer, result_layer, intersection
                 ):
                     failed_sum += 1
-            print("Total number of intersections: {}".format(_i))
+                intersection_count += 1
+            print("Total number of intersections: {}".format(intersection_count))
             print(
                 "Number of intersections without location features: {}".format(
                     failed_sum
