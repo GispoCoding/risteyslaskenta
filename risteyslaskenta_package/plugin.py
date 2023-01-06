@@ -1,6 +1,6 @@
 from typing import Callable, List, Optional
 
-from qgis.core import QgsCoordinateReferenceSystem
+from qgis.core import QgsCoordinateReferenceSystem, QgsWkbTypes
 from qgis.PyQt.QtCore import QCoreApplication, QTranslator
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction, QWidget
@@ -15,8 +15,9 @@ from risteyslaskenta_package.qgis_plugin_tools.tools.resources import plugin_nam
 
 from .risteyslaskenta_functions import (
     check_same_crs,
-    create_lines_for_intersection,
+    convert_polygons_to_centroids,
     create_result_layer,
+    process_intersection,
 )
 from .ui.risteyslaskenta_dialog import RisteyslaskentaDialog
 
@@ -154,12 +155,8 @@ class Plugin:
                 raise Exception("The layers have different CRS")
 
             # Convert input data if needed
-            # if points_layer.geometryType() == QgsWkbTypes.Polygon:
-            #     points_layer = convert_polygons_to_centroids(points_layer)
-
-            # Filter data if wanted
-            if self.dlg.checkBox.isChecked():
-                pass  # To be implemented
+            if points_layer.geometryType() == QgsWkbTypes.PolygonGeometry:
+                points_layer = convert_polygons_to_centroids(points_layer)
 
             # Crs from data layer
             crs = QgsCoordinateReferenceSystem()
@@ -167,21 +164,21 @@ class Plugin:
             result_layer = create_result_layer(crs)
 
             # Iterate each intersection
-            # We want to handle one intersection at a time to create arcs that
+            # We want to handle one intersection at a time to create visuals that
             # would overlap as little as possible
             index = data_layer.fields().indexOf("id")
             intersections = data_layer.uniqueValues(index)
             failed_sum = 0
             intersection_count = 0
             for intersection in intersections:
-                if not create_lines_for_intersection(
+                if not process_intersection(
                     points_layer, data_layer, result_layer, intersection
                 ):
                     failed_sum += 1
                 intersection_count += 1
             print("Total number of intersections: {}".format(intersection_count))
             print(
-                "Number of intersections without location features: {}".format(
+                "Number of intersections without any location features: {}".format(
                     failed_sum
                 )
             )
