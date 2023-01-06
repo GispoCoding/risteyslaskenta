@@ -18,7 +18,11 @@ from qgis.PyQt.QtCore import QVariant
 
 
 def create_result_layer(crs) -> QgsVectorLayer:
-    """Create the result layer and add it to QGIS layers. No data at this stage."""
+    """Create the result layer and add it to QGIS layers.
+
+    The result layer geometry type is Line (CompoundCurve) in QGIS and the
+    individual features added will be QgsCircularStrings. The attributes/data columns
+    are defined here. No data is added at this stage."""
     result_layer = QgsVectorLayer("CompoundCurve", "temp", "memory")
     result_layer.setCrs(crs)
     result_layer.dataProvider().addAttributes(
@@ -41,7 +45,10 @@ def create_result_layer(crs) -> QgsVectorLayer:
 
 
 def perpendicular(vector: Tuple[float, float]) -> np.ndarray:
-    """Calculates a vector perpendicular to the given input vector."""
+    """Calculates a vector perpendicular to the given input vector.
+
+    This function is used to calculate the move vector for a curve
+    geometry."""
     perpendicular_vector = np.empty_like(vector)
     perpendicular_vector[0] = -vector[1]
     perpendicular_vector[1] = vector[0]
@@ -63,7 +70,9 @@ def distance(p1: Tuple[float, float], p2: Tuple[float, float]) -> float:
 
 
 def convert_polygons_to_centroids(polygon_layer: QgsVectorLayer) -> QgsVectorLayer:
-    """Calls QGIS own algorithm to convert a polygon layer to centroid point layer."""
+    """Calls QGIS own algorithm to convert a polygon layer to centroid point layer.
+
+    This is used if intersection branches are represented as polygons initially."""
     parameters = {"INPUT": polygon_layer, "OUTPUT": "memory:"}
     result = processing.run("native:centroids", parameters)
     layer = result["OUTPUT"]
@@ -143,7 +152,9 @@ def calculate_intersection_center_point(
 ) -> tuple[float, float]:
     """Calculates the intersection center point based on location of intersection branches.
 
-    Duplicate branch locations are not counted, so only unique points count."""
+    Intersection center point is used in creating the curve geometries, by shifting the
+    curve middle point towards intersection center. Duplicate branch locations are not
+    counted, so only unique points count."""
     x_coords = set([feat.geometry().asPoint().x() for feat in location_feats])
     y_coords = set([feat.geometry().asPoint().y() for feat in location_feats])
     intersection_center_point = sum(x_coords) / len(x_coords), sum(y_coords) / len(
@@ -198,7 +209,10 @@ def calculate_move_vector(
 ) -> tuple[np.ndarray, List[str]]:
     """Calculate the vector by which a visualized line is moved.
 
-    Moving of the visuals is done to minimize overlapping."""
+    Moving of the visuals is done to minimize overlapping. For different
+    directions but same branch pair, moved_list is used and move vector
+    is higher for the second curve of the pair. If there is data from multiple
+    days and/or times, this overlapping cannot be avoided as of now."""
     # Move the start and end points away from intersection center
     # First make sure the direction is away from the intersection center
     if distance(
@@ -227,7 +241,10 @@ def create_and_add_feature(
     move_vector: np.ndarray,
 ) -> QgsFeature:
     """Create the curve feature (CircularString) that represents traffic from one
-    intersection branch to another and add it to the result layer."""
+    intersection branch to another and add it to the result layer.
+
+    The calculated move vector is utilized here to shift the points before creating
+    the curve geometry. Attribute data is set here as much as possible."""
     start_point = QgsPointXY(
         start_point.x() + move_vector[0], start_point.y() + move_vector[1]
     )

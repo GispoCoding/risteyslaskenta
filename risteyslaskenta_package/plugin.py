@@ -152,7 +152,7 @@ class Plugin:
             data_layer = self.dlg.mMapLayerComboBox.currentLayer()
             points_layer = self.dlg.mMapLayerComboBox_2.currentLayer()
             if not check_same_crs(data_layer, points_layer):
-                raise Exception("The layers have different CRS")
+                raise Exception("The layers have different CRS, reprojecting needed")
 
             # Convert input data if needed
             if points_layer.geometryType() == QgsWkbTypes.PolygonGeometry:
@@ -166,6 +166,8 @@ class Plugin:
             # Iterate each intersection
             # We want to handle one intersection at a time to create visuals that
             # would overlap as little as possible
+            # We count the number of all intersections and "failed" intersections
+            # for additional info and print it
             index = data_layer.fields().indexOf("id")
             intersections = data_layer.uniqueValues(index)
             failed_sum = 0
@@ -183,7 +185,5 @@ class Plugin:
                 )
             )
 
-            # Visualize and stop editing
-            # visualize_layer(result_layer)
             result_layer.commitChanges()
             iface.vectorLayerTools().stopEditing(result_layer)
