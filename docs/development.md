@@ -1,11 +1,9 @@
 Development of risteyslaskenta plugin
 ===========================
 
-This project uses [qgis_plugin_tools](https://github.com/my-organization/qgis_plugin_tools) submodule,
-so set git setting value: `git config --global submodule.recurse true`.
-
-When cloning use `--recurse-submodules` like so:
-`git clone --recurse-submodules https://github.com/my-organization/risteyslaskenta.git`
+This project uses [qgis_plugin_tools](https://github.com/GispoCoding/qgis_plugin_tools) submodule,
+so when cloning use `--recurse-submodules` like so:
+`git clone --recurse-submodules https://github.com/GispoCoding/risteyslaskenta.git`
 
 
 
