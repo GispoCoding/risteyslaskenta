@@ -56,13 +56,13 @@ def perpendicular(vector: Tuple[float, float]) -> np.ndarray:
 
 
 def normalize(array) -> np.ndarray:
-    """Normalize an input array and covert to Numpy array."""
+    """Normalize an input array and convert to Numpy array."""
     array = np.array(array)
     return array / np.linalg.norm(array)
 
 
 def distance(p1: Tuple[float, float], p2: Tuple[float, float]) -> float:
-    """Calculates distance between in points in 2D space. Pythagorean theorem."""
+    """Calculates distance between points in 2D space. Pythagorean theorem."""
     x = (p1[0] - p2[0]) ** 2
     y = (p1[1] - p2[1]) ** 2
     distance = sqrt(x + y)
@@ -78,28 +78,6 @@ def convert_polygons_to_centroids(polygon_layer: QgsVectorLayer) -> QgsVectorLay
     layer = result["OUTPUT"]
     print("Converted a polygon layer to a point layer")
     return layer
-
-
-# def set_and_format_labels(layer: QgsVectorLayer) -> None:
-#     """Some basic formatting. Not in use now."""
-#     layer_settings = QgsPalLayerSettings()
-#     text_format = QgsTextFormat()
-#     text_format.setFont(QFont("FreeMono", 10))
-#     text_format.setSize(10)
-#     buffer_settings = QgsTextBufferSettings()
-#     buffer_settings.setEnabled(True)
-#     buffer_settings.setSize(0.1)
-#     buffer_settings.setColor(QColor("black"))
-#     text_format.setBuffer(buffer_settings)
-#     layer_settings.setFormat(text_format)
-#     layer_settings.fieldName = "id"
-#     layer_settings.placement = 0
-#     layer_settings.dist = 2.0
-#     layer_settings.enabled = True
-#     layer_settings = QgsVectorLayerSimpleLabeling(layer_settings)
-#     layer.setLabelsEnabled(True)
-#     layer.setLabeling(layer_settings)
-#     layer.triggerRepaint()
 
 
 def check_same_crs(layer1: QgsVectorLayer, layer2: QgsVectorLayer) -> bool:
@@ -119,7 +97,7 @@ def calculate_middle_point(
 
     If the road geometry for which this is calculated is determined not
     to be straight, the middle point is moved towards the intersection center,
-    to create an arc that represents more closely a turn in intersection.
+    to create a curve that represents a turn in an intersection.
 
     Sometimes the interesction center is not in a logical place due to unusual
     geometry or errors in data. In these cases, we revert creating the curve
@@ -152,7 +130,7 @@ def calculate_intersection_center_point(
 ) -> tuple[float, float]:
     """Calculates the intersection center point based on location of intersection branches.
 
-    Intersection center point is used in creating the curve geometries, by shifting the
+    Intersection center point is used in creating the curve geometries by shifting the
     curve middle point towards intersection center. Duplicate branch locations are not
     counted, so only unique points count."""
     x_coords = set([feat.geometry().asPoint().x() for feat in location_feats])
@@ -213,6 +191,7 @@ def calculate_move_vector(
     directions but same branch pair, moved_list is used and move vector
     is higher for the second curve of the pair. If there is data from multiple
     days and/or times, this overlapping cannot be avoided as of now."""
+
     # Move the start and end points away from intersection center
     # First make sure the direction is away from the intersection center
     if distance(
@@ -278,7 +257,6 @@ def create_and_add_feature(
     return feat
 
 
-# This is now big O(n*m)
 def process_intersection(
     points_layer: QgsVectorLayer,
     data_layer: QgsVectorLayer,
