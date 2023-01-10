@@ -80,13 +80,6 @@ def convert_polygons_to_centroids(polygon_layer: QgsVectorLayer) -> QgsVectorLay
     return layer
 
 
-def check_same_crs(layer1: QgsVectorLayer, layer2: QgsVectorLayer) -> bool:
-    """Check if two layers are in the same coordinate system."""
-    if layer1.crs() == layer2.crs():
-        return True
-    return False
-
-
 def calculate_middle_point(
     start_point: QgsPointXY,
     end_point: QgsPointXY,

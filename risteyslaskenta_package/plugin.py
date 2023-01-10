@@ -14,7 +14,6 @@ from risteyslaskenta_package.qgis_plugin_tools.tools.i18n import setup_translati
 from risteyslaskenta_package.qgis_plugin_tools.tools.resources import plugin_name
 
 from .risteyslaskenta_functions import (
-    check_same_crs,
     convert_polygons_to_centroids,
     create_result_layer,
     process_intersection,
@@ -151,8 +150,6 @@ class Plugin:
             # Selections
             data_layer = self.dlg.mMapLayerComboBox.currentLayer()
             points_layer = self.dlg.mMapLayerComboBox_2.currentLayer()
-            if not check_same_crs(data_layer, points_layer):
-                raise Exception("The layers have different CRS, reprojecting needed")
 
             # Convert input data if needed
             if points_layer.geometryType() == QgsWkbTypes.PolygonGeometry:
@@ -160,7 +157,7 @@ class Plugin:
 
             # Crs from data layer
             crs = QgsCoordinateReferenceSystem()
-            crs.createFromProj(data_layer.crs().toProj())
+            crs.createFromProj(points_layer.crs().toProj())
             result_layer = create_result_layer(crs)
 
             # Iterate each intersection
