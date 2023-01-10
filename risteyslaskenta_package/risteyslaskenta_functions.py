@@ -246,7 +246,7 @@ def create_and_add_feature(
             data_feat["id"],
             data_feat["direction"],
             data_feat["direction"][0],
-            data_feat["autot_num"],
+            data_feat["autot"],
             -9999,
             -9999,
             -9999,
@@ -313,13 +313,13 @@ def process_intersection(
 
         if start_point and end_point:
             # Update intersection max and min value
-            if int(data_feat["autot_num"]) > intersection_max_value:
-                intersection_max_value = int(data_feat["autot_num"])
+            if int(data_feat["autot"]) > intersection_max_value:
+                intersection_max_value = int(data_feat["autot"])
             if (
                 intersection_min_value is None
-                or int(data_feat["autot_num"]) < intersection_min_value
+                or int(data_feat["autot"]) < intersection_min_value
             ):
-                intersection_min_value = int(data_feat["autot_num"])
+                intersection_min_value = int(data_feat["autot"])
 
             # 5.3
             middle_point = calculate_middle_point(
