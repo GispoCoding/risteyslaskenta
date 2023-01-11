@@ -35,7 +35,6 @@ def create_result_layer(crs) -> QgsVectorLayer:
             QgsField("max_cars_in_intersection", QVariant.Double),
             QgsField("min_cars_in_intersection", QVariant.Double),
             QgsField("cars_intersection_normalized", QVariant.Double),
-            QgsField("feat_length", QVariant.Double),
         ]
     )
     result_layer.updateFields()
@@ -144,10 +143,12 @@ def find_start_and_end_points(
     this data feature cannot be visualized."""
     start_point, end_point = None, None
     for location_feat in location_feats:
-        if str(location_feat["Haara"]) == data_feat["direction"][0]:
-            start_point = location_feat.geometry().asPoint()
-        elif str(location_feat["Haara"]) == data_feat["direction"][1]:
-            end_point = location_feat.geometry().asPoint()
+        point_id = location_feat["Piste"]
+        if point_id == data_feat["id"][-len(point_id) :]:
+            if str(location_feat["Haara"]) == data_feat["direction"][0]:
+                start_point = location_feat.geometry().asPoint()
+            elif str(location_feat["Haara"]) == data_feat["direction"][1]:
+                end_point = location_feat.geometry().asPoint()
         if start_point and end_point:
             break
     return start_point, end_point
@@ -243,7 +244,6 @@ def create_and_add_feature(
             -9999,
             -9999,
             -9999,
-            circular_ring.length(),
         ]
     )
     _ = result_layer.dataProvider().addFeature(feat)
@@ -273,8 +273,6 @@ def process_intersection(
     6. Update some intersection attributes
     """
 
-    print("Intersection id is type string: {}".format(isinstance(intersection_id, str)))
-    print("Intersection id is type int: {}".format(isinstance(intersection_id, int)))
     # 1
     data_layer.selectByExpression("id = '{}'".format(intersection_id))
     data_feats = data_layer.selectedFeatures()
