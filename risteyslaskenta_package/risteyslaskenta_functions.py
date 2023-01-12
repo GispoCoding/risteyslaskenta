@@ -7,6 +7,7 @@ from qgis.core import (
     QgsCircularString,
     QgsFeature,
     QgsField,
+    QgsFields,
     QgsGeometry,
     QgsPoint,
     QgsPointXY,
@@ -18,7 +19,7 @@ from qgis.core.additions.edit import edit
 from qgis.PyQt.QtCore import QVariant
 
 
-def create_result_layer(crs, data_layer_fields) -> QgsVectorLayer:
+def create_result_layer(crs, data_layer_fields: QgsFields) -> QgsVectorLayer:
     """Create the result layer and add it to QGIS layers.
 
     The result layer geometry type is Line (CompoundCurve) in QGIS and the
@@ -347,7 +348,6 @@ def process_intersection(
     # 6
     with edit(result_layer):
         for feat in added_features:
-            # print(feat.fields().names())
             normalized_value = int(feat["autot"]) / intersection_max_value
             feat["intersection_autot_max"] = intersection_max_value
             feat["intersection_autot_min"] = intersection_min_value
