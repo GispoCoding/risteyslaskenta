@@ -158,7 +158,7 @@ class Plugin:
             # Crs from data layer
             crs = QgsCoordinateReferenceSystem()
             crs.createFromProj(points_layer.crs().toProj())
-            result_layer = create_result_layer(crs)
+            result_layer = create_result_layer(crs, data_layer.fields())
 
             # Iterate each intersection
             # We want to handle one intersection at a time to create visuals that

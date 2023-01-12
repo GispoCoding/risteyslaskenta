@@ -14,10 +14,11 @@ from qgis.core import (
     QgsVectorFileWriter,
     QgsVectorLayer,
 )
+from qgis.core.additions.edit import edit
 from qgis.PyQt.QtCore import QVariant
 
 
-def create_result_layer(crs) -> QgsVectorLayer:
+def create_result_layer(crs, data_layer_fields) -> QgsVectorLayer:
     """Create the result layer and add it to QGIS layers.
 
     The result layer geometry type is Line (CompoundCurve) in QGIS and the
@@ -25,19 +26,18 @@ def create_result_layer(crs) -> QgsVectorLayer:
     are defined here. No data is added at this stage."""
     result_layer = QgsVectorLayer("CompoundCurve", "temp", "memory")
     result_layer.setCrs(crs)
+    result_layer.dataProvider().addAttributes(data_layer_fields)
     result_layer.dataProvider().addAttributes(
         [
-            QgsField("id", QVariant.String),
-            QgsField("intersection", QVariant.String),
-            QgsField("direction", QVariant.String),
+            QgsField("autot_numeric", QVariant.Int),
             QgsField("start_direction", QVariant.String),
-            QgsField("cars", QVariant.Double),
-            QgsField("max_cars_in_intersection", QVariant.Double),
-            QgsField("min_cars_in_intersection", QVariant.Double),
-            QgsField("cars_intersection_normalized", QVariant.Double),
+            QgsField("intersection_autot_max", QVariant.Int),
+            QgsField("intersection_autot_min", QVariant.Int),
+            QgsField("intersection_autot_normalized", QVariant.Double),
         ]
     )
     result_layer.updateFields()
+    result_layer.commitChanges()
     result_layer.setName("Intersections visualized")
     QgsProject.instance().addMapLayer(result_layer)
     return result_layer
@@ -228,25 +228,20 @@ def create_and_add_feature(
         end_point.x() + move_vector[0], end_point.y() + move_vector[1]
     )
 
+    result_layer.startEditing()
     feat = QgsFeature(result_layer.fields())
     circular_ring = QgsCircularString(
         QgsPoint(start_point), QgsPoint(middle_point), QgsPoint(end_point)
     )
     geom = QgsGeometry(circular_ring)
     feat.setGeometry(geom)
-    feat.setAttributes(
-        [
-            data_feat["fid"],
-            data_feat["id"],
-            data_feat["direction"],
-            data_feat["direction"][0],
-            data_feat["autot"],
-            -9999,
-            -9999,
-            -9999,
-        ]
-    )
+    attrs = data_feat.attributes() + [
+        int(data_feat["autot"]),
+        data_feat["direction"][0],
+    ]
+    feat.setAttributes(attrs)
     _ = result_layer.dataProvider().addFeature(feat)
+    result_layer.commitChanges()
     return feat
 
 
@@ -350,17 +345,14 @@ def process_intersection(
             added_features.append(feat)
 
     # 6
-    for feat in added_features:
-        intersection_min_value = 0
-        normalized_value = (feat["cars"] - intersection_min_value) / (
-            intersection_max_value - intersection_min_value
-        )
-        attrs = {
-            5: intersection_max_value,
-            6: intersection_min_value,
-            7: normalized_value,
-        }
-        result_layer.dataProvider().changeAttributeValues({feat.id(): attrs})
+    with edit(result_layer):
+        for feat in added_features:
+            # print(feat.fields().names())
+            normalized_value = int(feat["autot"]) / intersection_max_value
+            feat["intersection_autot_max"] = intersection_max_value
+            feat["intersection_autot_min"] = intersection_min_value
+            feat["intersection_autot_normalized"] = normalized_value
+            result_layer.updateFeature(feat)
 
     return True
 
