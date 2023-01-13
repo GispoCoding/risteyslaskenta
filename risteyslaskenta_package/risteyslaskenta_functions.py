@@ -110,7 +110,13 @@ def calculate_middle_point(
 
     if distance(
         (middle_point.x(), middle_point.y()), (end_point.x(), end_point.y())
-    ) > distance((start_point.x(), start_point.y()), (end_point.x(), end_point.y())):
+    ) > distance(
+        (start_point.x(), start_point.y()), (end_point.x(), end_point.y())
+    ) or distance(
+        (middle_point.x(), middle_point.y()), (start_point.x(), start_point.y())
+    ) > distance(
+        (start_point.x(), start_point.y()), (end_point.x(), end_point.y())
+    ):
         mid_x = (start_point.x() + end_point.x()) / 2
         mid_y = (start_point.y() + end_point.y()) / 2
         middle_point = QgsPointXY(mid_x, mid_y)
@@ -174,12 +180,10 @@ def determine_straight_road(
 
 
 def calculate_move_vector(
-    data_feat: QgsFeature,
     start_point: QgsPointXY,
     intersection_center_point: tuple[float, float],
     unit_vector: np.ndarray,
-    moved_list: List[str],
-) -> tuple[np.ndarray, List[str]]:
+) -> np.ndarray:
     """Calculate the vector by which a visualized line is moved.
 
     Moving of the visuals is done to minimize overlapping. For different
@@ -189,21 +193,23 @@ def calculate_move_vector(
 
     # Move the start and end points away from intersection center
     # First make sure the direction is away from the intersection center
+    inner = True
     if distance(
         (start_point.x(), start_point.y()), intersection_center_point
     ) > distance(
         (start_point.x() + unit_vector[0], start_point.y() + unit_vector[1]),
         intersection_center_point,
     ):
+        inner = False
         unit_vector = -unit_vector
-    # If the curve being drawn is 2nd for a branch pair (so the same pair but reverse
-    # direction is found in moved_list), move it further to avoid overlap
-    if data_feat["direction"][::-1] in moved_list:
-        move_vector = 10 * unit_vector
-    else:
+    # Draw curve at different distance from intersection center depending
+    # on the traffic direction
+    if inner:
         move_vector = 6 * unit_vector
-        moved_list.append(data_feat["direction"])
-    return move_vector, moved_list
+    else:
+        move_vector = 10 * unit_vector
+
+    return move_vector
 
 
 def create_and_add_feature(
@@ -284,7 +290,6 @@ def process_intersection(
     intersection_center_point = calculate_intersection_center_point(location_feats)
 
     # 4
-    moved_list: List[str] = []
     added_features: List[QgsFeature] = []
     intersection_max_value = 0
     intersection_min_value = None
@@ -324,14 +329,14 @@ def process_intersection(
 
             # 5.5
             if straight_road:
-                move_vector = 2 * unit_vector
+                move_vector = (
+                    -2 * unit_vector
+                )  # invert direction for right hand traffic visuals
             else:
-                move_vector, moved_list = calculate_move_vector(
-                    data_feat,
+                move_vector = calculate_move_vector(
                     start_point,
                     intersection_center_point,
                     unit_vector,
-                    moved_list,
                 )
 
             # 5.6
