@@ -1,6 +1,5 @@
 from typing import Callable, List, Optional
 
-from qgis.core import QgsCoordinateReferenceSystem, QgsWkbTypes
 from qgis.PyQt.QtCore import QCoreApplication, QTranslator
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction, QWidget
@@ -13,11 +12,6 @@ from risteyslaskenta_package.qgis_plugin_tools.tools.custom_logging import (
 from risteyslaskenta_package.qgis_plugin_tools.tools.i18n import setup_translation
 from risteyslaskenta_package.qgis_plugin_tools.tools.resources import plugin_name
 
-from .risteyslaskenta_functions import (
-    convert_polygons_to_centroids,
-    create_result_layer,
-    process_intersection,
-)
 from .ui.risteyslaskenta_dialog import RisteyslaskentaDialog
 
 
@@ -115,7 +109,7 @@ class Plugin:
             text=Plugin.name,
             callback=self.run,
             parent=iface.mainWindow(),
-            add_to_toolbar=False,
+            add_to_toolbar=True,
         )
 
     def onClosePlugin(self) -> None:  # noqa N802
@@ -140,47 +134,5 @@ class Plugin:
             self.first_start = False
             self.dlg = RisteyslaskentaDialog()
 
-        # show the dialog and run dialog event loop
-        self.dlg.show()
-        result = self.dlg.exec_()
-
-        # See if OK was pressed
-        if result:
-
-            # Selections
-            data_layer = self.dlg.mMapLayerComboBox.currentLayer()
-            points_layer = self.dlg.mMapLayerComboBox_2.currentLayer()
-
-            # Convert input data if needed
-            if points_layer.geometryType() == QgsWkbTypes.PolygonGeometry:
-                points_layer = convert_polygons_to_centroids(points_layer)
-
-            # Crs from data layer
-            crs = QgsCoordinateReferenceSystem()
-            crs.createFromProj(points_layer.crs().toProj())
-            result_layer = create_result_layer(crs, data_layer.fields())
-
-            # Iterate each intersection
-            # We want to handle one intersection at a time to create visuals that
-            # would overlap as little as possible
-            # We count the number of all intersections and "failed" intersections
-            # for additional info and print it
-            index = data_layer.fields().indexOf("id")
-            intersections = data_layer.uniqueValues(index)
-            failed_sum = 0
-            intersection_count = 0
-            for intersection in intersections:
-                if not process_intersection(
-                    points_layer, data_layer, result_layer, intersection
-                ):
-                    failed_sum += 1
-                intersection_count += 1
-            print("Total number of intersections: {}".format(intersection_count))
-            print(
-                "Number of intersections without any location features: {}".format(
-                    failed_sum
-                )
-            )
-
-            result_layer.commitChanges()
-            iface.vectorLayerTools().stopEditing(result_layer)
+        # Show the dialog
+        self.dlg.exec_()
